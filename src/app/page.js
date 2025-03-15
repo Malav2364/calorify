@@ -1,102 +1,130 @@
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/ui/dl-toggle";
+import { ArrowRight, PieChart, Target, Utensils, Activity } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen flex flex-col w-full overflow-x-hidden">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b w-full">
+        <div className="container mx-auto px-4 flex h-16 items-center justify-between max-w-full">
+          <div className="flex items-center gap-2">
+            <div className="bg-emerald-500 dark:bg-emerald-600 rounded-md p-1">
+              <Utensils className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl">
+              Calori<span className="text-emerald-500 dark:text-emerald-400">fy</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <ModeToggle />
+            <Link href="/signup">
+              <Button className="flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white">Sign in</Button>
+            </Link>
+          </div>
         </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="flex-1 w-full">
+        <section className="w-full px-4 py-12 md:py-24 lg:py-32 bg-gradient-to-b from-background to-emerald-50 dark:from-background dark:to-emerald-950/20">
+          <div className="container mx-auto max-w-[1200px]">
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-16 items-center">
+              <div className="space-y-6">
+                <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
+                  Track your calories <span className="text-emerald-500 dark:text-emerald-400">effortlessly</span>
+                </h1>
+                <p className="text-muted-foreground text-lg">
+                  Maintain a healthy lifestyle by tracking your daily calorie intake. 
+                  Set goals, monitor progress, and achieve your fitness objectives.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button size="lg" className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white">
+                    Get Started <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <Button size="lg" variant="outline" className="flex items-center justify-center border-emerald-500 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
+                    Learn More
+                  </Button>
+                </div>
+              </div>
+              <div className="relative h-[350px] rounded-xl overflow-hidden bg-white/50 dark:bg-white/5 border border-emerald-100 dark:border-emerald-900/50 shadow-lg shadow-emerald-100/20 dark:shadow-emerald-900/10">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white/80 dark:bg-black/50 backdrop-blur-sm p-8 rounded-xl shadow-md">
+                    <PieChart className="h-24 w-24 text-emerald-500 dark:text-emerald-400" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="w-full px-4 py-12 md:py-24 border-t border-emerald-100 dark:border-emerald-900/50">
+          <div className="container mx-auto max-w-[1200px]">
+            <h2 className="text-3xl font-bold tracking-tighter text-center mb-12">
+              Key <span className="text-emerald-500 dark:text-emerald-400">Features</span>
+            </h2>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              <div className="bg-card p-6 rounded-lg border border-emerald-100 dark:border-emerald-900/50 shadow-sm hover:shadow-md hover:shadow-emerald-100/20 dark:hover:shadow-emerald-900/10 transition-shadow">
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-full w-fit mb-4">
+                  <Utensils className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Food Logging</h3>
+                <p className="text-muted-foreground">
+                  Easily log your meals and track your daily calorie intake with our extensive food database.
+                </p>
+              </div>
+              <div className="bg-card p-6 rounded-lg border border-emerald-100 dark:border-emerald-900/50 shadow-sm hover:shadow-md hover:shadow-emerald-100/20 dark:hover:shadow-emerald-900/10 transition-shadow">
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-full w-fit mb-4">
+                  <Target className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Goal Setting</h3>
+                <p className="text-muted-foreground">
+                  Set personalized calorie and nutrition goals based on your weight and fitness objectives.
+                </p>
+              </div>
+              <div className="bg-card p-6 rounded-lg border border-emerald-100 dark:border-emerald-900/50 shadow-sm hover:shadow-md hover:shadow-emerald-100/20 dark:hover:shadow-emerald-900/10 transition-shadow">
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-full w-fit mb-4">
+                  <Activity className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Progress Tracking</h3>
+                <p className="text-muted-foreground">
+                  Visualize your progress with detailed charts and statistics to stay motivated.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer */}
+      <footer className="border-t border-emerald-100 dark:border-emerald-900/50 py-6 md:py-8 w-full bg-background">
+        <div className="container mx-auto px-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between max-w-[1200px]">
+          <div className="flex items-center gap-2">
+            <div className="bg-emerald-500 dark:bg-emerald-600 rounded-md p-1">
+              <Utensils className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-medium">
+              Calori<span className="text-emerald-500 dark:text-emerald-400">fy</span>
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            © 2025 Calorify. All rights reserved.
+          </p>
+          <div className="flex items-center gap-4">
+            <a href="#" className="text-sm text-muted-foreground hover:text-emerald-500 dark:hover:text-emerald-400">
+              Privacy
+            </a>
+            <a href="#" className="text-sm text-muted-foreground hover:text-emerald-500 dark:hover:text-emerald-400">
+              Terms
+            </a>
+            <a href="#" className="text-sm text-muted-foreground hover:text-emerald-500 dark:hover:text-emerald-400">
+              Contact
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   );

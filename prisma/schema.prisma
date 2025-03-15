@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  hashedPassword  String // Will store the hashed password
+  height    Float?   // In cm, optional field
+  weight    Float?   // In kg, optional field
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dishes      Dish[]
+}
+
+model Dish {
+  id        Int      @id @default(autoincrement())
+  dishName  String   // Name of the dish
+  calories  Float    // Calories fetched from an API
+  userId    Int      // Foreign key to link to User
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
