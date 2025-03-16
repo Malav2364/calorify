@@ -11,15 +11,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
+  const [gender, setGender] = useState("") // State to track gender selection
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setLoading(true)
+    
+    // Get form data including gender
+    const formData = new FormData(e.target)
+    const userData = {
+      name: formData.get("firstName"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+      height: formData.get("height"),
+      heightUnit: formData.get("heightUnit"),
+      weight: formData.get("weight"),
+      weightUnit: formData.get("weightUnit"),
+      gender: gender // Use the gender state value
+    }
+    
+    console.log("User data:", userData)
+    
     // Simulate API call
     setTimeout(() => {
       setLoading(false)
       // Handle redirect or success notification
     }, 1500)
+  }
+
+  // Handle gender selection
+  const handleGenderChange = (value) => {
+    setGender(value)
   }
 
   return (
@@ -50,6 +72,7 @@ export default function SignupPage() {
                 <Label htmlFor="firstName">Name</Label>
                 <Input 
                   id="firstName" 
+                  name="firstName"
                   required 
                   className="border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600" 
                 />
@@ -60,6 +83,7 @@ export default function SignupPage() {
               <Label htmlFor="email">Email</Label>
               <Input 
                 id="email" 
+                name="email"
                 type="email" 
                 required 
                 className="border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600" 
@@ -70,6 +94,7 @@ export default function SignupPage() {
               <Label htmlFor="password">Password</Label>
               <Input 
                 id="password" 
+                name="password"
                 type="password" 
                 required 
                 className="border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600" 
@@ -79,18 +104,48 @@ export default function SignupPage() {
               </p>
             </div>
             
+            {/* Gender Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select
+                value={gender}
+                onValueChange={handleGenderChange}
+                required
+              >
+                <SelectTrigger 
+                  id="gender"
+                  className="w-full border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600"
+                >
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Hidden input to store gender value for form submission */}
+              <Input 
+                type="hidden" 
+                name="gender" 
+                value={gender} 
+              />
+            </div>
+            
             {/* Height Input */}
             <div className="space-y-2">
               <Label htmlFor="height">Height</Label>
               <div className="flex gap-2">
                 <Input 
                   id="height" 
+                  name="height"
                   type="number" 
                   min="1"
                   required 
                   className="flex-1 border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600" 
                 />
-                <Select defaultValue="cm">
+                <Select defaultValue="cm" name="heightUnit">
                   <SelectTrigger className="w-24 border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600">
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
@@ -108,13 +163,14 @@ export default function SignupPage() {
               <div className="flex gap-2">
                 <Input 
                   id="weight" 
+                  name="weight"
                   type="number" 
                   min="1"
                   step="0.1"
                   required 
                   className="flex-1 border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600" 
                 />
-                <Select defaultValue="kg">
+                <Select defaultValue="kg" name="weightUnit">
                   <SelectTrigger className="w-24 border-emerald-200 dark:border-emerald-900/50 focus:ring-emerald-500 dark:focus:ring-emerald-600">
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
@@ -125,7 +181,6 @@ export default function SignupPage() {
                 </Select>
               </div>
             </div>
-            
             
             <Button 
               type="submit" 

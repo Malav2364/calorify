@@ -97,6 +97,104 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Testimonials Section */}
+        <section className="w-full px-4 py-16 md:py-24 bg-emerald-50 dark:bg-emerald-950/10 border-t border-emerald-100 dark:border-emerald-900/50">
+          <div className="container mx-auto max-w-[1200px]">
+            <h2 className="text-3xl font-bold tracking-tighter text-center mb-4">
+              What Our <span className="text-emerald-500 dark:text-emerald-400">Users</span> Say
+            </h2>
+            <p className="text-center text-muted-foreground max-w-2xl mx-auto mb-12">
+              Don't just take our word for it. Hear from people who have transformed their health journey with Calorify.
+            </p>
+            
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {/* Testimonial 1 */}
+              <div className="bg-card p-6 rounded-lg border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4 text-emerald-500 dark:text-emerald-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5"></path>
+                      <path d="M19 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5"></path>
+                    </svg>
+                  </div>
+                  <p className="text-muted-foreground mb-4 flex-1">
+                    Calorify has completely changed my relationship with food. The easy tracking and goal setting helped me lose 15 pounds in just 2 months!
+                  </p>
+                  <div className="mt-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400 font-bold">
+                        SJ
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Sarah Johnson</h4>
+                        <p className="text-xs text-muted-foreground">Lost 15 pounds</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Testimonial 2 */}
+              <div className="bg-card p-6 rounded-lg border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4 text-emerald-500 dark:text-emerald-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5"></path>
+                      <path d="M19 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5"></path>
+                    </svg>
+                  </div>
+                  <p className="text-muted-foreground mb-4 flex-1">
+                    As a fitness coach, I recommend Calorify to all my clients. The intuitive interface and detailed nutritional insights make it the best calorie tracker on the market.
+                  </p>
+                  <div className="mt-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400 font-bold">
+                        MP
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Michael Patel</h4>
+                        <p className="text-xs text-muted-foreground">Fitness Coach</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Testimonial 3 */}
+              <div className="bg-card p-6 rounded-lg border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
+                <div className="flex flex-col h-full">
+                  <div className="mb-4 text-emerald-500 dark:text-emerald-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5"></path>
+                      <path d="M19 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5"></path>
+                    </svg>
+                  </div>
+                  <p className="text-muted-foreground mb-4 flex-1">
+                    I've tried many calorie tracking apps, but Calorify stands out with its beautiful design and accurate food database. It's become an essential part of my daily routine.
+                  </p>
+                  <div className="mt-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400 font-bold">
+                        AL
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Alex Lee</h4>
+                        <p className="text-xs text-muted-foreground">Using for 6+ months</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-12 text-center">
+              <Button variant="outline" className="border-emerald-200 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
+                Read More Success Stories
+              </Button>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}

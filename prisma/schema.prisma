@@ -18,8 +18,9 @@ model User {
   name      String
   email     String   @unique
   hashedPassword  String // Will store the hashed password
-  height    Float?   // In cm, optional field
-  weight    Float?   // In kg, optional field
+  height    Float   // In cm, optional field
+  weight    Float   // In kg, optional field
+  gender         String 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   dishes      Dish[]
