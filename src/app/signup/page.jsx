@@ -63,7 +63,7 @@ export default function SignupPage() {
       });
       
       // Show login in progress toast
-      const loginToastId = toast.loading('Logging you in...');
+      // const loginToastId = toast.loading('Logging you in...');
       
       // Step 2: Log the user in
       const loginResponse = await fetch('/api/auth/login', {
@@ -94,13 +94,13 @@ export default function SignupPage() {
       }
       
       // Update login toast to success
-      toast.success('Logged in successfully!', {
-        id: loginToastId
-      });
+      // toast.success('Logged in successfully!', {
+      //   id: loginToastId
+      // });
       
       // Store the token and user data in localStorage for client-side usage
-      localStorage.setItem('authToken', loginData.token);
-      localStorage.setItem('user', JSON.stringify(loginData.user));
+      // localStorage.setItem('authToken', loginData.token);
+      // localStorage.setItem('user', JSON.stringify(loginData.user));
       
       // Show welcome toast
       toast.success(`Welcome to Calorify, ${loginData.user.name}!`, {

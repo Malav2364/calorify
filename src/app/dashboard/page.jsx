@@ -120,25 +120,23 @@ export default function Dashboard() {
     }
   }, [status, router]);
   
-  // Set user data from session when available
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       // Set data directly from session
-      console.log("Session data:", session.user);
+      // console.log("Session data:", session.user);
       setUserData({
         name: session.user.name || "User",
         email: session.user.email,
         height: session.user.height || null,
         weight: session.user.weight || null,
         gender: session.user.gender || "Male",
-        activityLevel: "Moderate", // Default value as this isn't in the schema
-        goal: "Maintain weight" // Default value as this isn't in the schema
+        activityLevel: "Moderate", 
+        goal: "Maintain weight" 
       });
       setLoading(false);
     }
   }, [status, session]);
   
-  // Load dishes from API only
   useEffect(() => {
     if (status === 'authenticated') {
       const fetchDishes = async () => {
@@ -174,7 +172,6 @@ export default function Dashboard() {
               
               setDishes(formattedDishes);
             } else {
-              // Set empty array if no dishes returned
               setDishes([]);
             }
           } else {
@@ -193,14 +190,12 @@ export default function Dashboard() {
       
       fetchDishes();
       
-      // Set up periodic refresh to keep data in sync
       const refreshInterval = setInterval(fetchDishes, 60000); // Refresh every minute
       
       return () => clearInterval(refreshInterval);
     }
   }, [status, router]);
   
-  // Load calorie history from API
   useEffect(() => {
     if (status === 'authenticated') {
       const fetchCalorieHistory = async () => {
@@ -243,7 +238,6 @@ export default function Dashboard() {
     }
   }, [status, router]);
   
-  // Add this function to fetch calorie history
   const fetchCalorieHistory = async () => {
     try {
       setHistoryLoading(true);
@@ -252,7 +246,7 @@ export default function Dashboard() {
       const response = await fetch('/api/user/calories', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store' // Avoid caching issues
+        cache: 'no-store'
       });
       
       if (response.status === 401) {
@@ -285,7 +279,6 @@ export default function Dashboard() {
     }
   };
 
-  // Add this useEffect to fetch calorie history on component mount
   useEffect(() => {
     if (status === 'authenticated') {
       fetchCalorieHistory();
@@ -302,12 +295,10 @@ export default function Dashboard() {
     userData.activityLevel
   );
   
-  // Calculate calories consumed today
   const caloriesConsumed = dishes.reduce((total, dish) => total + Number(dish.calories), 0);
   const caloriesRemaining = totalCaloriesNeeded - caloriesConsumed;
   const consumptionPercentage = Math.round((caloriesConsumed / totalCaloriesNeeded) * 100) || 0;
   
-  // Determine calorie progress color based on consumption percentage
   const getCalorieProgressColor = () => {
     if (consumptionPercentage >= 90) return "bg-red-500";
     if (consumptionPercentage >= 80) return "bg-orange-500";
@@ -315,7 +306,6 @@ export default function Dashboard() {
     return "bg-emerald-500";
   };
   
-  // Add new dish - API only
   const handleAddDish = async () => {
     if (newDishName && newDishCalories) {
       try {
@@ -362,7 +352,6 @@ export default function Dashboard() {
     }
   };
   
-  // Delete a dish - API only
   const handleDeleteDish = async (id) => {
     try {
       setLoading(true);
@@ -394,7 +383,6 @@ export default function Dashboard() {
     }
   };
   
-  // Handle logout - no localStorage to clear
   const handleLogout = async () => {
     try {
       await signOut({ redirect: false });
@@ -404,7 +392,6 @@ export default function Dashboard() {
     }
   };
   
-  // Update "New Day" button to reset dishes and store calorie history
 const handleNewDay = async () => {
   try {
     setLoading(true);
@@ -425,12 +412,10 @@ const handleNewDay = async () => {
           return new Date(dish.createdAt).toISOString().split('T')[0] === today;
         });
         
-        // Calculate total calories consumed today
         const totalCalories = todayDishes.reduce((total, dish) => {
           return total + parseFloat(dish.calories);
         }, 0);
         
-        // Only save history if there were calories today
         if (totalCalories > 0) {
           try {
             console.log("Saving calorie history:", {
@@ -439,7 +424,6 @@ const handleNewDay = async () => {
               target: totalCaloriesNeeded || 2000
             });
             
-            // Store calorie history in user profile
             const saveCaloriesResponse = await fetch('/api/user/calories', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -462,7 +446,6 @@ const handleNewDay = async () => {
           }
         }
         
-        // Delete dishes one by one to avoid batch issues
         let deletedCount = 0;
         for (const dish of todayDishes) {
           try {
@@ -478,10 +461,8 @@ const handleNewDay = async () => {
           }
         }
         
-        // Update UI
         setDishes([]);
         
-        // Show success message
         if (totalCalories > 0) {
           toast.success(`Day complete! ${Math.round(totalCalories)} calories logged.`);
         } else {
@@ -552,13 +533,6 @@ const handleNewDay = async () => {
                     <span className="text-xs text-muted-foreground">{session?.user?.email}</span>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push('/profile')}>
-                  <UserIcon className="h-4 w-4" /> Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push('/settings')}>
-                  <Settings className="h-4 w-4" /> Settings
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="flex items-center gap-2 text-red-500" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" /> Log out

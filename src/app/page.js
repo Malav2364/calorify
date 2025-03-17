@@ -105,7 +105,7 @@ export default function Home() {
               What Our <span className="text-emerald-500 dark:text-emerald-400">Users</span> Say
             </h2>
             <p className="text-center text-muted-foreground max-w-2xl mx-auto mb-12">
-              Don't just take our word for it. Hear from people who have transformed their health journey with Calorify.
+              Don&apos;t just take our word for it. Hear from people who have transformed their health journey with Calorify.
             </p>
             
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -171,7 +171,7 @@ export default function Home() {
                     </svg>
                   </div>
                   <p className="text-muted-foreground mb-4 flex-1">
-                    I've tried many calorie tracking apps, but Calorify stands out with its beautiful design and accurate food database. It's become an essential part of my daily routine.
+                    I&apos;ve tried many calorie tracking apps, but Calorify stands out with its beautiful design and accurate food database. It&apos;s become an essential part of my daily routine.
                   </p>
                   <div className="mt-auto">
                     <div className="flex items-center gap-3">
