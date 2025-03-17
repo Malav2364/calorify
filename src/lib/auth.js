@@ -59,7 +59,7 @@ export const authOptions = {
   session: {
     strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXT_SECRET,
 };
 
 export const registerUser = async (name, email, password, height, weight, gender) => {

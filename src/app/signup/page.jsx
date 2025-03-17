@@ -1,51 +1,128 @@
-"use client"
+"use client";
 
-import React, { useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Utensils } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Utensils } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast, Toaster } from 'react-hot-toast';
 
 export default function SignupPage() {
-  const [loading, setLoading] = useState(false)
-  const [gender, setGender] = useState("") // State to track gender selection
+  const [loading, setLoading] = useState(false);
+  const [gender, setGender] = useState("");
+  const router = useRouter();
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setLoading(true)
-    
-    // Get form data including gender
-    const formData = new FormData(e.target)
-    const userData = {
-      name: formData.get("firstName"),
-      email: formData.get("email"),
-      password: formData.get("password"),
-      height: formData.get("height"),
-      heightUnit: formData.get("heightUnit"),
-      weight: formData.get("weight"),
-      weightUnit: formData.get("weightUnit"),
-      gender: gender // Use the gender state value
-    }
-    
-    console.log("User data:", userData)
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-      // Handle redirect or success notification
-    }, 1500)
-  }
-
-  // Handle gender selection
   const handleGenderChange = (value) => {
-    setGender(value)
-  }
+    setGender(value);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      // Get form data
+      const formData = new FormData(e.target);
+      const userData = {
+        name: formData.get("firstName"),
+        email: formData.get("email"),
+        password: formData.get("password"),
+        height: parseFloat(formData.get("height")),
+        weight: parseFloat(formData.get("weight")),
+        gender: gender
+      };
+
+      // Show signup in progress toast
+      const signupToastId = toast.loading('Creating your account...');
+      
+      // Step 1: Create the user account
+      const signupResponse = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      });
+      
+      const signupData = await signupResponse.json();
+      
+      if (!signupResponse.ok) {
+        // Update the loading toast to error
+        toast.error(signupData.message || 'Failed to create account', {
+          id: signupToastId
+        });
+        throw new Error(signupData.message || 'Failed to create account');
+      }
+      
+      // Update signup toast to success
+      toast.success('Account created successfully!', {
+        id: signupToastId
+      });
+      
+      // Show login in progress toast
+      const loginToastId = toast.loading('Logging you in...');
+      
+      // Step 2: Log the user in
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password
+        })
+      });
+      
+      const loginData = await loginResponse.json();
+      
+      if (!loginResponse.ok) {
+        // Update the loading toast to error
+        toast.error('Account created but login failed. Please log in manually.', {
+          id: loginToastId
+        });
+        
+        // Redirect to login page after a short delay
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+        
+        return;
+      }
+      
+      // Update login toast to success
+      toast.success('Logged in successfully!', {
+        id: loginToastId
+      });
+      
+      // Store the token and user data in localStorage for client-side usage
+      localStorage.setItem('authToken', loginData.token);
+      localStorage.setItem('user', JSON.stringify(loginData.user));
+      
+      // Show welcome toast
+      toast.success(`Welcome to Calorify, ${loginData.user.name}!`, {
+        duration: 5000,
+        icon: '👋'
+      });
+      
+      // Redirect to dashboard
+      router.push('/login');
+      
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast.error(error.message || 'An error occurred during signup');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-emerald-50 dark:from-background dark:to-emerald-950/20 px-4 py-10">
+      <Toaster position="top-center" reverseOrder={false} />
+      
       <div className="absolute top-4 left-4">
         <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
@@ -200,5 +277,5 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
-  )
+  );
 }

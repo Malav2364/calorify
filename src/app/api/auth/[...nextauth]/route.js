@@ -1,8 +1,7 @@
-import NextAuth from "next-auth/next";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
-import jwt from "jsonwebtoken";
 
 export const authOptions = {
   providers: [
@@ -19,8 +18,18 @@ export const authOptions = {
         }
         
         try {
+          // Get the complete user object including height, weight and gender
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              hashedPassword: true,
+              height: true,
+              weight: true,
+              gender: true
+            }
           });
   
           if (!user || !user.hashedPassword) {
@@ -39,7 +48,10 @@ export const authOptions = {
           return {
             id: user.id.toString(),
             email: user.email,
-            name: user.name
+            name: user.name,
+            height: user.height || null,
+            weight: user.weight || null,
+            gender: user.gender || null
           };
         } catch (error) {
           console.error("Authorization error:", error);
@@ -54,14 +66,22 @@ export const authOptions = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.height = user.height;
+        token.weight = user.weight;
+        token.gender = user.gender;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id;
-        session.user.email = token.email;
-        session.user.name = token.name;
+        session.user = {
+          id: token.id,
+          name: token.name,
+          email: token.email,
+          height: token.height,
+          weight: token.weight,
+          gender: token.gender
+        };
       }
       return session;
     },
@@ -71,73 +91,25 @@ export const authOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV !== "development"
+      }
+    }
   },
   debug: true,
-  secret: process.env.NEXT_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || process.env.NEXT_SECRET,
 };
 
-// Create a base handler
-const baseHandler = NextAuth(authOptions);
+// Create the handler using the updated NextAuth import
+const handler = NextAuth(authOptions);
 
-// Custom handler to wrap NextAuth and provide token response
-export async function POST(req) {
-  try {
-    // Check if this is a credentials login request
-    const body = await req.json();
-    
-    if (body.email && body.password) {
-      console.log("Processing login request for:", body.email);
-      
-      // Find the user
-      const user = await prisma.user.findUnique({
-        where: { email: body.email }
-      });
-      
-      if (!user) {
-        console.log("User not found:", body.email);
-        return Response.json({ success: false, message: "Invalid credentials" }, { status: 401 });
-      }
-      
-      // Verify password
-      const passwordValid = await compare(body.password, user.hashedPassword);
-      
-      if (!passwordValid) {
-        console.log("Invalid password for:", body.email);
-        return Response.json({ success: false, message: "Invalid credentials" }, { status: 401 });
-      }
-      
-      // Generate a token
-      const token = jwt.sign(
-        { 
-          id: user.id,
-          email: user.email,
-          name: user.name
-        },
-        process.env.NEXT_SECRET,
-        { expiresIn: '7d' }
-      );
-      
-      
-      // Return token and user data
-      return Response.json({
-        success: true,
-        message: "Login successful",
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name
-        },
-        token
-      }, { status: 200 });
-    }
-    
-    // If not a credential login, pass to NextAuth
-    return baseHandler(req);
-  } catch (error) {
-    console.error("Login error:", error);
-    return Response.json({ success: false, message: "An error occurred during login" }, { status: 500 });
-  }
-}
-
-// For GET requests, use standard NextAuth handler
-export const GET = baseHandler;
+// Export the handler
+export { handler as GET, handler as POST };

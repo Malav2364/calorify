@@ -1,15 +1,48 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import jwt from "jsonwebtoken";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 
-// Helper function to check dish ownership
-async function checkDishOwnership(dishId, userEmail) {
-  // Find the user by email
-  const user = await prisma.user.findUnique({
-    where: { email: userEmail },
-  });
+// Helper to verify JWT token from request header
+async function verifyAuthToken(req) {
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.NEXT_SECRET);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(decoded.id) }
+    });
+    
+    return user;
+  } catch (error) {
+    console.error("Token verification error:", error);
+    return null;
+  }
+}
+
+// Get authenticated user from session or token
+async function getAuthenticatedUser(req) {
+  // Check NextAuth session first
+  const session = await getServerSession(authOptions);
+  if (session && session.user) {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+    return user;
+  }
   
+  // Fall back to JWT token
+  return await verifyAuthToken(req);
+}
+
+// Helper function to check dish ownership
+async function checkDishOwnership(dishId, user) {
   if (!user) {
     return { authorized: false, message: "User not found" };
   }
@@ -36,11 +69,11 @@ export async function GET(req, { params }) {
   try {
     const dishId = params.id;
     
-    // Get the user session to check authentication
-    const session = await getServerSession(authOptions);
+    // Get authenticated user
+    const user = await getAuthenticatedUser(req);
     
     // Return error if not authenticated
-    if (!session || !session.user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -48,10 +81,7 @@ export async function GET(req, { params }) {
     }
     
     // Check dish ownership
-    const { authorized, message, dish } = await checkDishOwnership(
-      dishId,
-      session.user.email
-    );
+    const { authorized, message, dish } = await checkDishOwnership(dishId, user);
     
     if (!authorized) {
       return NextResponse.json(
@@ -75,11 +105,11 @@ export async function PUT(req, { params }) {
   try {
     const dishId = params.id;
     
-    // Get the user session to check authentication
-    const session = await getServerSession(authOptions);
+    // Get authenticated user
+    const user = await getAuthenticatedUser(req);
     
     // Return error if not authenticated
-    if (!session || !session.user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -99,10 +129,7 @@ export async function PUT(req, { params }) {
     }
     
     // Check dish ownership
-    const { authorized, message, dish } = await checkDishOwnership(
-      dishId,
-      session.user.email
-    );
+    const { authorized, message, dish } = await checkDishOwnership(dishId, user);
     
     if (!authorized) {
       return NextResponse.json(
@@ -135,47 +162,56 @@ export async function PUT(req, { params }) {
 }
 
 // DELETE: Delete a dish
-export async function DELETE(req, { params }) {
+export async function DELETE(request, context) {
   try {
-    const dishId = params.id;
+    // Correctly access the ID from context.params
+    const dishId = context.params.id;
     
-    // Get the user session to check authentication
-    const session = await getServerSession(authOptions);
+    console.log("Attempting to delete dish with ID:", dishId);
     
-    // Return error if not authenticated
-    if (!session || !session.user) {
+    if (!dishId) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
+        { success: false, message: "Dish ID is required" }, 
+        { status: 400 }
+      );
+    }
+    
+    // Use our existing helper function to get authenticated user
+    const user = await getAuthenticatedUser(request);
+    
+    if (!user) {
+      console.log("No authenticated user found for DELETE request");
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" }, 
         { status: 401 }
       );
     }
     
-    // Check dish ownership
-    const { authorized, message } = await checkDishOwnership(
-      dishId,
-      session.user.email
-    );
+    console.log(`User ID from authentication: ${user.id}`);
+    
+    // Use the checkDishOwnership helper function which is already defined
+    const { authorized, message, dish } = await checkDishOwnership(dishId, user);
     
     if (!authorized) {
+      console.log(message);
       return NextResponse.json(
-        { success: false, message },
+        { success: false, message }, 
         { status: 403 }
       );
     }
     
     // Delete the dish
     await prisma.dish.delete({
-      where: { id: parseInt(dishId) },
+      where: { id: parseInt(dishId) }
     });
     
-    return NextResponse.json(
-      { success: true, message: "Dish deleted successfully" },
-      { status: 200 }
-    );
+    console.log("Dish deleted successfully:", dishId);
+    
+    return NextResponse.json({ success: true, message: "Dish deleted successfully" });
   } catch (error) {
     console.error("Error deleting dish:", error);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: "Failed to delete dish" }, 
       { status: 500 }
     );
   }

@@ -24,6 +24,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   dishes      Dish[]
+  calorieHistory CalorieHistory[]
 }
 
 model Dish {
@@ -33,4 +34,17 @@ model Dish {
   userId    Int      // Foreign key to link to User
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model CalorieHistory{
+    id        Int      @id @default(autoincrement())
+  userId    Int
+  date      String
+  calories  Int
+  target    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }

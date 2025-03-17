@@ -1,111 +1,129 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import jwt from "jsonwebtoken";
 
-// GET: Get all dishes for the authenticated user
+// Helper to verify JWT token from request header
+async function verifyAuthToken(req) {
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.NEXT_SECRET);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(decoded.id) }
+    });
+    
+    return user;
+  } catch (error) {
+    console.error("Token verification error:", error);
+    return null;
+  }
+}
+
+// Get authenticated user from session or token
+async function getAuthenticatedUser(req) {
+  // Check NextAuth session first
+  try {
+    const session = await getServerSession(authOptions);
+    if (session && session.user) {
+      console.log("Found session for user:", session.user.email);
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      });
+      return user;
+    }
+  } catch (error) {
+    console.error("Error getting session:", error);
+  }
+  
+  // Fall back to JWT token
+  return await verifyAuthToken(req);
+}
+
 export async function GET(req) {
   try {
-    // Get the user session to check authentication
-    const session = await getServerSession(authOptions);
+    // Get authenticated user
+    const user = await getAuthenticatedUser(req);
     
-    // Return error if not authenticated
-    if (!session || !session.user) {
+    if (!user) {
+      console.log("No authenticated user found");
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
+        { success: false, message: "Unauthorized" }, 
         { status: 401 }
       );
     }
     
-    // Get user email from session
-    const userEmail = session.user.email;
+    console.log("Fetching dishes for user ID:", user.id);
     
-    // Find the user by email
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-    });
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
-    }
-    
-    // Get all dishes for the user
+    // Get user's dishes - where userId matches the authenticated user's ID
     const dishes = await prisma.dish.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
+      where: {
+        userId: user.id
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
     
-    return NextResponse.json({ success: true, dishes }, { status: 200 });
+    console.log(`Found ${dishes.length} dishes for user ID ${user.id}`);
+    
+    return NextResponse.json({ success: true, dishes });
   } catch (error) {
     console.error("Error fetching dishes:", error);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: "Failed to fetch dishes" }, 
       { status: 500 }
     );
   }
 }
 
-// POST: Create a new dish for the authenticated user
 export async function POST(req) {
   try {
-    // Get the user session to check authentication
-    const session = await getServerSession(authOptions);
+    // Get authenticated user
+    const user = await getAuthenticatedUser(req);
     
-    // Return error if not authenticated
-    if (!session || !session.user) {
+    if (!user) {
+      console.log("No authenticated user found for POST request");
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
+        { success: false, message: "Unauthorized" }, 
         { status: 401 }
       );
     }
     
-    // Parse request body
     const body = await req.json();
     const { dishName, calories } = body;
     
-    // Validate required fields
-    if (!dishName || calories === undefined) {
+    console.log(`Adding dish "${dishName}" with ${calories} calories for user ID: ${user.id}`);
+    
+    if (!dishName || !calories) {
       return NextResponse.json(
-        { success: false, message: "Dish name and calories are required" },
+        { success: false, message: "Dish name and calories are required" }, 
         { status: 400 }
       );
     }
     
-    // Get user email from session
-    const userEmail = session.user.email;
-    
-    // Find the user by email
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-    });
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
-    }
-    
-    // Create new dish
-    const newDish = await prisma.dish.create({
+    // Create dish using the authenticated user's ID
+    const dish = await prisma.dish.create({
       data: {
         dishName,
-        calories: parseFloat(calories),
-        userId: user.id,
-      },
+        calories: parseInt(calories),
+        userId: user.id
+      }
     });
     
-    return NextResponse.json(
-      { success: true, dish: newDish },
-      { status: 201 }
-    );
+    console.log("Dish created successfully:", dish.id);
+    
+    return NextResponse.json({ success: true, dish });
   } catch (error) {
-    console.error("Error creating dish:", error);
+    console.error("Error adding dish:", error);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: "Failed to add dish" }, 
       { status: 500 }
     );
   }

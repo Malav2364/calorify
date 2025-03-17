@@ -20,7 +20,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <ModeToggle />
-            <Link href="/signup">
+            <Link href="/login">
               <Button className="flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white">Sign in</Button>
             </Link>
           </div>

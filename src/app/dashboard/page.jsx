@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
 import { 
   ArrowDownIcon, 
   PlusIcon, 
@@ -11,7 +12,8 @@ import {
   Activity,
   LogOut,
   Settings,
-  Bell
+  Bell,
+  RefreshCw
 } from 'lucide-react'
 import { 
   Card, 
@@ -23,7 +25,6 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -36,27 +37,12 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ModeToggle } from "@/components/ui/dl-toggle"
 import { cn } from "@/lib/utils"
-
-// Mock user data
-const userData = {
-  name: "John Doe",
-  height: 175, // cm
-  weight: 70, // kg
-  age: 32,
-  gender: "Male",
-  activityLevel: "Moderate",
-  goal: "Maintain weight"
-}
-
-// Mock dish data
-const initialDishes = [
-  { id: 1, dishName: "Oatmeal with berries", calories: 320 },
-  { id: 2, dishName: "Grilled chicken salad", calories: 450 },
-  { id: 3, dishName: "Protein shake", calories: 180 }
-]
+import { useRouter } from "next/navigation"
+import { toast, Toaster } from 'react-hot-toast'
 
 // Calculate BMI
 const calculateBMI = (weight, height) => {
+  if (!weight || !height) return null;
   const heightInMeters = height / 100;
   const bmi = weight / (heightInMeters * heightInMeters);
   return bmi.toFixed(1);
@@ -64,6 +50,7 @@ const calculateBMI = (weight, height) => {
 
 // Get BMI category
 const getBMICategory = (bmi) => {
+  if (!bmi) return { category: "Add height & weight", color: "text-muted-foreground" };
   if (bmi < 18.5) return { category: "Underweight", color: "text-blue-500" };
   if (bmi < 25) return { category: "Normal weight", color: "text-emerald-500" };
   if (bmi < 30) return { category: "Overweight", color: "text-yellow-500" };
@@ -71,14 +58,18 @@ const getBMICategory = (bmi) => {
 }
 
 // Calculate daily calorie needs (Harris-Benedict equation with activity factor)
-const calculateCalorieNeeds = (weight, height, age, gender, activityLevel) => {
+// Uses an assumed average age of 30 for simplicity
+const calculateCalorieNeeds = (weight, height, gender, activityLevel) => {
+  if (!weight || !height) return 2000; // Default value if data is missing
+  
   let bmr = 0;
+  const assumedAge = 30; // Default age for calculation
   
   // Calculate BMR based on gender
   if (gender === "Male") {
-    bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+    bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * assumedAge);
   } else {
-    bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+    bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * assumedAge);
   }
   
   // Apply activity multiplier
@@ -96,33 +87,210 @@ const calculateCalorieNeeds = (weight, height, age, gender, activityLevel) => {
     case "Very Active":
       activityMultiplier = 1.9;
       break;
+    default:
+      activityMultiplier = 1.55; // Default to moderate activity
   }
   
   return Math.round(bmr * activityMultiplier);
 }
 
 export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  
   const [dishes, setDishes] = useState([]);
   const [newDishName, setNewDishName] = useState("");
   const [newDishCalories, setNewDishCalories] = useState("");
+  const [userData, setUserData] = useState({
+    name: "User",
+    height: null,
+    weight: null,
+    gender: "Male",
+    activityLevel: "Moderate",
+    goal: "Maintain weight"
+  });
+  const [loading, setLoading] = useState(true);
+  const [calorieHistory, setCalorieHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   
-  // Load dishes from localStorage on initial render
+  // Redirect if not authenticated
   useEffect(() => {
-    const savedDishes = localStorage.getItem("calorify-dishes");
-    if (savedDishes) {
-      setDishes(JSON.parse(savedDishes));
-    } else {
-      setDishes(initialDishes);
-      localStorage.setItem("calorify-dishes", JSON.stringify(initialDishes));
+    if (status === 'unauthenticated') {
+      router.push('/login');
     }
-  }, []);
+  }, [status, router]);
   
-  // Save dishes to localStorage whenever they change
+  // Set user data from session when available
   useEffect(() => {
-    if (dishes.length > 0) {
-      localStorage.setItem("calorify-dishes", JSON.stringify(dishes));
+    if (status === 'authenticated' && session?.user) {
+      // Set data directly from session
+      console.log("Session data:", session.user);
+      setUserData({
+        name: session.user.name || "User",
+        email: session.user.email,
+        height: session.user.height || null,
+        weight: session.user.weight || null,
+        gender: session.user.gender || "Male",
+        activityLevel: "Moderate", // Default value as this isn't in the schema
+        goal: "Maintain weight" // Default value as this isn't in the schema
+      });
+      setLoading(false);
     }
-  }, [dishes]);
+  }, [status, session]);
+  
+  // Load dishes from API only
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const fetchDishes = async () => {
+        try {
+          setLoading(true);
+          const response = await fetch('/api/dishes', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (response.status === 401) {
+            toast.error('Your session has expired. Please log in again.');
+            signOut({ redirect: false });
+            router.push('/login');
+            return;
+          }
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.dishes) {
+              // Filter today's dishes
+              const today = new Date().toISOString().split('T')[0];
+              const todayDishes = data.dishes.filter(dish => {
+                return new Date(dish.createdAt).toISOString().split('T')[0] === today;
+              });
+              
+              // Format dishes to match the expected structure
+              const formattedDishes = todayDishes.map(dish => ({
+                id: dish.id,
+                dishName: dish.dishName,
+                calories: dish.calories
+              }));
+              
+              setDishes(formattedDishes);
+            } else {
+              // Set empty array if no dishes returned
+              setDishes([]);
+            }
+          } else {
+            console.error('Error fetching dishes:', response.statusText);
+            toast.error('Failed to load dishes from server');
+            setDishes([]);
+          }
+        } catch (error) {
+          console.error('Error fetching dishes:', error);
+          toast.error('Failed to load dishes from server');
+          setDishes([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchDishes();
+      
+      // Set up periodic refresh to keep data in sync
+      const refreshInterval = setInterval(fetchDishes, 60000); // Refresh every minute
+      
+      return () => clearInterval(refreshInterval);
+    }
+  }, [status, router]);
+  
+  // Load calorie history from API
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const fetchCalorieHistory = async () => {
+        try {
+          setLoading(true);
+          const response = await fetch('/api/user/calories', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (response.status === 401) {
+            toast.error('Your session has expired. Please log in again.');
+            signOut({ redirect: false });
+            router.push('/login');
+            return;
+          }
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.calorieHistory) {
+              setCalorieHistory(data.calorieHistory);
+            } else {
+              setCalorieHistory([]);
+            }
+          } else {
+            console.error('Error fetching calorie history:', response.statusText);
+            toast.error('Failed to load calorie history from server');
+            setCalorieHistory([]);
+          }
+        } catch (error) {
+          console.error('Error fetching calorie history:', error);
+          toast.error('Failed to load calorie history from server');
+          setCalorieHistory([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchCalorieHistory();
+    }
+  }, [status, router]);
+  
+  // Add this function to fetch calorie history
+  const fetchCalorieHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      console.log('Fetching calorie history...');
+      
+      const response = await fetch('/api/user/calories', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store' // Avoid caching issues
+      });
+      
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please log in again.');
+        signOut({ redirect: false });
+        router.push('/login');
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('Calorie history response:', data);
+      
+      if (response.ok && data.success) {
+        if (data.history && Array.isArray(data.history)) {
+          console.log(`Loaded ${data.history.length} calorie history entries`);
+          setCalorieHistory(data.history);
+        } else {
+          console.log('No calorie history entries found or invalid data format');
+          setCalorieHistory([]);
+        }
+      } else {
+        console.error('Failed to fetch calorie history:', data.message);
+        setCalorieHistory([]);
+      }
+    } catch (error) {
+      console.error('Error fetching calorie history:', error);
+      setCalorieHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Add this useEffect to fetch calorie history on component mount
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchCalorieHistory();
+    }
+  }, [status]);
   
   // Calculate user metrics
   const bmi = calculateBMI(userData.weight, userData.height);
@@ -130,15 +298,14 @@ export default function Dashboard() {
   const totalCaloriesNeeded = calculateCalorieNeeds(
     userData.weight, 
     userData.height, 
-    userData.age, 
     userData.gender, 
     userData.activityLevel
   );
   
   // Calculate calories consumed today
-  const caloriesConsumed = dishes.reduce((total, dish) => total + dish.calories, 0);
+  const caloriesConsumed = dishes.reduce((total, dish) => total + Number(dish.calories), 0);
   const caloriesRemaining = totalCaloriesNeeded - caloriesConsumed;
-  const consumptionPercentage = Math.round((caloriesConsumed / totalCaloriesNeeded) * 100);
+  const consumptionPercentage = Math.round((caloriesConsumed / totalCaloriesNeeded) * 100) || 0;
   
   // Determine calorie progress color based on consumption percentage
   const getCalorieProgressColor = () => {
@@ -148,28 +315,208 @@ export default function Dashboard() {
     return "bg-emerald-500";
   };
   
-  // Add new dish
-  const handleAddDish = () => {
+  // Add new dish - API only
+  const handleAddDish = async () => {
     if (newDishName && newDishCalories) {
-      const newDish = {
-        id: Date.now(),
-        dishName: newDishName,
-        calories: parseInt(newDishCalories)
-      };
-      
-      setDishes([...dishes, newDish]);
-      setNewDishName("");
-      setNewDishCalories("");
+      try {
+        setLoading(true);
+        const response = await fetch('/api/dishes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dishName: newDishName,
+            calories: parseInt(newDishCalories)
+          })
+        });
+        
+        if (response.status === 401) {
+          toast.error('Your session has expired. Please log in again.');
+          signOut({ redirect: false });
+          router.push('/login');
+          return;
+        }
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success && data.dish) {
+          // Add the new dish to state
+          setDishes([...dishes, {
+            id: data.dish.id,
+            dishName: data.dish.dishName,
+            calories: data.dish.calories
+          }]);
+          toast.success('Dish added successfully!');
+          setNewDishName("");
+          setNewDishCalories("");
+        } else {
+          toast.error(data.message || 'Failed to add dish');
+        }
+      } catch (error) {
+        console.error('Error adding dish:', error);
+        toast.error('Failed to add dish. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      toast.error('Please enter both dish name and calories');
     }
   };
   
-  // Delete a dish
-  const handleDeleteDish = (id) => {
-    setDishes(dishes.filter(dish => dish.id !== id));
+  // Delete a dish - API only
+  const handleDeleteDish = async (id) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/dishes/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.status === 401) {
+        toast.error('Your session has expired. Please log in again.');
+        signOut({ redirect: false });
+        router.push('/login');
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Remove dish from state
+        setDishes(dishes.filter(dish => dish.id !== id));
+        toast.success(data.message || 'Dish deleted successfully');
+      } else {
+        toast.error(data.message || 'Failed to delete dish');
+      }
+    } catch (error) {
+      console.error('Error deleting dish:', error);
+      toast.error('An error occurred while deleting the dish');
+    } finally {
+      setLoading(false);
+    }
   };
   
+  // Handle logout - no localStorage to clear
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false });
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+  
+  // Update "New Day" button to reset dishes and store calorie history
+const handleNewDay = async () => {
+  try {
+    setLoading(true);
+    // Get today's dishes
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Fetch all dishes from today
+    const response = await fetch('/api/dishes', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (data.success && data.dishes) {
+        const todayDishes = data.dishes.filter(dish => {
+          return new Date(dish.createdAt).toISOString().split('T')[0] === today;
+        });
+        
+        // Calculate total calories consumed today
+        const totalCalories = todayDishes.reduce((total, dish) => {
+          return total + parseFloat(dish.calories);
+        }, 0);
+        
+        // Only save history if there were calories today
+        if (totalCalories > 0) {
+          try {
+            console.log("Saving calorie history:", {
+              date: today,
+              calories: totalCalories,
+              target: totalCaloriesNeeded || 2000
+            });
+            
+            // Store calorie history in user profile
+            const saveCaloriesResponse = await fetch('/api/user/calories', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                date: today,
+                calories: Math.round(totalCalories),
+                target: Math.round(totalCaloriesNeeded || 2000)
+              })
+            });
+            
+            const saveCaloriesData = await saveCaloriesResponse.json();
+            
+            if (saveCaloriesResponse.ok) {
+              console.log('Calorie history saved successfully');
+            } else {
+              console.error('Failed to save calorie history:', saveCaloriesData.message);
+            }
+          } catch (error) {
+            console.error('Error saving calorie history:', error);
+          }
+        }
+        
+        // Delete dishes one by one to avoid batch issues
+        let deletedCount = 0;
+        for (const dish of todayDishes) {
+          try {
+            const deleteResponse = await fetch(`/api/dishes/${dish.id}`, {
+              method: 'DELETE'
+            });
+            
+            if (deleteResponse.ok) {
+              deletedCount++;
+            }
+          } catch (err) {
+            console.error(`Error deleting dish ${dish.id}:`, err);
+          }
+        }
+        
+        // Update UI
+        setDishes([]);
+        
+        // Show success message
+        if (totalCalories > 0) {
+          toast.success(`Day complete! ${Math.round(totalCalories)} calories logged.`);
+        } else {
+          toast.success('Started new day.');
+        }
+        
+        // Optionally refresh the page to ensure UI is in sync
+        // window.location.reload();
+      } else {
+        toast.info('No dishes found for today.');
+      }
+    } else {
+      toast.error('Failed to fetch dishes. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error starting new day:', error);
+    toast.error('Failed to reset dishes for a new day');
+  } finally {
+    setLoading(false);
+  }
+};
+  
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  // Render the rest of your dashboard UI (no changes needed here)
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-emerald-50/30 dark:from-background dark:to-emerald-950/10">
+      <Toaster position="top-center" reverseOrder={false} />
+      
       {/* Header/Navbar */}
       <header className="sticky top-0 z-50 w-full border-b border-emerald-100 dark:border-emerald-900/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -191,7 +538,7 @@ export default function Dashboard() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9 border border-emerald-200 dark:border-emerald-800">
-                    <AvatarImage src="/avatar.png" alt={userData.name} />
+                    <AvatarImage  alt={userData.name} />
                     <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">
                       {userData.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
@@ -199,16 +546,21 @@ export default function Dashboard() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span>{userData.name}</span>
+                    <span className="text-xs text-muted-foreground">{session?.user?.email}</span>
+                  </div>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex items-center gap-2">
+                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push('/profile')}>
                   <UserIcon className="h-4 w-4" /> Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2">
+                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push('/settings')}>
                   <Settings className="h-4 w-4" /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex items-center gap-2 text-red-500">
+                <DropdownMenuItem className="flex items-center gap-2 text-red-500" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" /> Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -231,11 +583,7 @@ export default function Dashboard() {
             </Button>
             <Button 
               className="bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white"
-              onClick={() => {
-                // Reset dishes for a new day
-                setDishes([]);
-                localStorage.removeItem("calorify-dishes");
-              }}
+              onClick={handleNewDay}
             >
               <PlusIcon className="h-4 w-4 mr-2" /> New Day
             </Button>
@@ -252,7 +600,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-3xl font-bold">{bmi}</p>
+                  <p className="text-3xl font-bold">{bmi || 'N/A'}</p>
                   <p className={`text-sm font-medium ${bmiCategory.color}`}>
                     {bmiCategory.category}
                   </p>
@@ -446,6 +794,93 @@ export default function Dashboard() {
             </CardFooter>
           </Card>
         </div>
+
+        {/* Calorie History Section */}
+        <Card className="border-emerald-100 dark:border-emerald-900/50 mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Calorie History</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 px-2 text-xs"
+                disabled={historyLoading}
+                onClick={fetchCalorieHistory}
+              >
+                {historyLoading ? (
+                  <span className="flex items-center">
+                    <span className="animate-spin h-3 w-3 mr-2 border-2 border-emerald-500 rounded-full border-t-transparent"></span>
+                    Loading...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                    Refresh
+                  </span>
+                )}
+              </Button>
+            </div>
+            <CardDescription>Your past 30 days of calorie tracking</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2">
+              {historyLoading ? (
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin h-8 w-8 border-4 border-emerald-500 rounded-full border-t-transparent"></div>
+                </div>
+              ) : calorieHistory && calorieHistory.length > 0 ? (
+                calorieHistory.map((entry, index) => (
+                  <div 
+                    key={index}
+                    className="flex justify-between p-3 border border-emerald-100 dark:border-emerald-900/50 rounded-md"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {new Date(entry.date).toLocaleDateString(undefined, { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">consumed</p>
+                        <p className="font-bold">{entry.calories}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">target</p>
+                        <p className="font-bold">{entry.target}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">difference</p>
+                        <p className={`font-bold ${entry.calories > entry.target ? 'text-red-500' : 'text-green-500'}`}>
+                          {entry.calories <= entry.target 
+                            ? `-${entry.target - entry.calories}` 
+                            : `+${entry.calories - entry.target}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                  <p>No history available yet</p>
+                  <p className="text-sm">Complete a day to see your progress</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4 text-xs"
+                    onClick={fetchCalorieHistory}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Try Again
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   )
